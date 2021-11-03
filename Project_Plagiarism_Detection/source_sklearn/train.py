@@ -7,7 +7,12 @@ import pandas as pd
 # sklearn.externals.joblib is deprecated in 0.21 and will be removed in 0.23. 
 # from sklearn.externals import joblib
 # Import joblib package directly
-import joblib
+import sklearn
+#import joblib
+from sklearn.externals import joblib
+import numpy as np
+import sagemaker
+from sagemaker import LinearLearner
 
 ## TODO: Import any additional libraries you need to define a model
 
@@ -20,7 +25,8 @@ def model_fn(model_dir):
     print("Loading model.")
     
     # load using joblib
-    model = joblib.load(os.path.join(model_dir, "model.joblib"))
+    #model = joblib.load(os.path.join(model_dir, "model.joblib"))
+    model = np.load(os.path.join(model_dir, "model.npy"))
     print("Done loading model.")
     
     return model
@@ -51,23 +57,30 @@ if __name__ == '__main__':
     train_data = pd.read_csv(os.path.join(training_dir, "train.csv"), header=None, names=None)
 
     # Labels are in the first column
-    train_y = train_data.iloc[:,0]
-    train_x = train_data.iloc[:,1:]
+    train_y = train_data.iloc[:,0].values.reshape(-1,1)
+    train_x = train_data.iloc[:,1:].values
     
     
     ## --- Your code here --- ##
     
 
     ## TODO: Define a model 
-    model = None
+    model = LinearLearner(role=role,    
+                          train_instance_count=1,
+                          train_instance_type="ml.c4.xlarge",
+                          predictor_type="binary_classifier",
+                          output_path=output_path,
+                          sagemaker_session=sagemaker_session,
+                          epochs=15)
     
     
     ## TODO: Train the model
-    
+    model.fit(train_x, train_y)
     
     
     ## --- End of your code  --- ##
     
 
     # Save the trained model
-    joblib.dump(model, os.path.join(args.model_dir, "model.joblib"))
+    #joblib.dump(model, os.path.join(args.model_dir, "model.joblib"))
+    np.save(model, os.path.join(args.model_dir, "model.npy"))
